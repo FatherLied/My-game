@@ -208,12 +208,19 @@ function component(width, height, image, x, y, type) {
                 entity.speedX = 0;
                 entity.speedY = 0;
 
-                if(myGameArea.canvas.height - this.height > 3 * entity.height){
-                    entity.speedY = -entity.height;
-                }
-                else if(this.x > areaWidth - (this.x + this.width)){
-                    entity.speedY = -entity.height;
-                }
+                
+
+                // if(entity.y - (entity.height*2) <= areaBorder || entity.y > this.y - this.height){
+                //     if(this.x > areaWidth - (this.x + this.width)){
+                //         entity.speedX = -entity.height;
+                //     }
+                //     else if(this.x < areaWidth - (this.x + this.width)){
+                //         entity.speedX = entity.height;
+                //     }
+                // }
+                
+
+                entity.speedY = -entity.height;
 
                 // entity.speedY = -entity.height;
 
