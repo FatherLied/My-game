@@ -30,17 +30,32 @@ var playerPiece;
 //Constants
 var playerWidth = 64;
 var playerHeight = 64;
-var playerMoveSpeed = 5;
+var playerMoveSpeed = 20;
+var playerHealth = 100;
 
 var bulletWidth = 8;
 var bulletHeight = 8;
+var bulletPower = 5;
+
+var projectileWidth = 16;
+var projectileHeight = 16;
+var projectilePower = 10;
 
 var spiderWidth = 210;
 var spiderHeight = 230;
 
+var b_spiderHealth = 250;
+var m_spiderHealth = 125;
+var s_spiderHeatlh = 75;
+
 var areaWidth = 840;
 var areaHeight = 840;
 var areaBorder = 10;
+
+var splashWidth = 840;
+var splashHeight = 120;
+
+var roundCount = 1;
 
 // Note: Spider Ratio is 21 x 23
 
@@ -49,8 +64,27 @@ var playerEntities = [];    // Player created entities (i.e. Player Bullets)
 var enemies = [];           // Enemies
 var enemyEntities = [];     // Enemy created entities
 
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function spawn(){
+    // console.log("kek");
+
+    for(var i = 0; i < roundCount; i++){
+        // console.log(i);
+
+        var newEnemy = new component(spiderWidth, spiderHeight, "assets/large_spider.png", getRandomInt(areaBorder, areaWidth - (areaBorder + spiderWidth)), areaBorder, "lrg_spider");
+
+        enemies.push(newEnemy);
+    }
+}
 
 function startGame() {
+    playerEntities = [];
+    enemies = [];       
+    enemyEntities = []; 
+
     playerPiece = new component(playerWidth, playerHeight, "assets/plane.png", areaWidth/2 - playerWidth/2, areaHeight - areaBorder, "player");
 
     var initialEnemy = new component(spiderWidth, spiderHeight, "assets/large_spider.png", areaWidth/2 - spiderWidth/2, areaBorder, "lrg_spider");
@@ -114,15 +148,17 @@ function component(width, height, image, x, y, type) {
     this.health = 0;
 
     if(this.type === "player")
-        this.health = 100;
+        this.health = playerHealth;
     else if(this.type === "bullet")
-        this.health = 5;
+        this.health = bulletPower;
     else if(this.type === "lrg_spider")
-        this.health = 500;
+        this.health = b_spiderHealth;
     else if(this.type === "med_spider")
-        this.health = 250;
+        this.health = m_spiderHealth;
     else if(this.type === "sml_spider")
-        this.health = 125;
+        this.health = s_spiderHeatlh;
+    else if(this.type === "projectile")
+        this.health = projectilePower;
 
     this.update = function() {
         ctx = myGameArea.context;
@@ -219,20 +255,29 @@ function component(width, height, image, x, y, type) {
                 //     }
                 // }
                 
-
-                entity.speedY = -entity.height;
+                if(!entity.health <= 0)
+                    entity.speedY = -(entity.height*2);
 
                 // entity.speedY = -entity.height;
 
-                entity.newPos();
-                entity.update();
+                // entity.newPos();
+                // entity.update();
             }
         }
-        // else if(this.type === "player"){
-            // if(entity.type === "lrg_spider" || entity.type === "med_spider" || entity.type === "sml_spider"){
-                // 
-            // }
-        // }
+        else if(this.type === "player"){
+            /*
+
+            Add Projectile code here
+
+            */
+            if(entity.type === "projectile"){
+                this.health -= entity.health;
+
+                if(this.health < 0)
+                    this.health = 0;
+            }
+        }
+
     }
 }
 
@@ -247,7 +292,23 @@ function cycleEntities(){
             playerEntities.splice(x, 1);
     }
 
+    for(x in enemyEntities){
+        enemyEntities[x].speedY = -5;
+
+        enemyEntities[x].newPos();
+        enemyEntities[x].update();
+        
+        if(enemyEntities[x].y >= areaHeight - myGameArea.border)
+            enemyEntities.splice(x, 1);
+    }
+
     for(x in enemies){
+        var attackChance = getRandomInt(1, 100);
+
+        if(attackChance % 4 == 0 && everyNthFrame(20)){
+            enemyEntities.push(new component(projectileWidth, projectileHeight, "assets/projectile.png", enemies[x].x + ((enemies[x].width/2)), enemies[x].y + 100, "projectile"))
+        }
+
         enemies[x].newPos();
         enemies[x].update();
     }
@@ -258,7 +319,14 @@ function checkCollision(){
         for(y in enemies){
             if(enemies[y].crashWith(playerEntities[x])){
                 playerEntities.splice(x,1);
+                break;
             }
+        }
+    }
+
+    for(x in enemyEntities){
+        if(playerPiece.crashWith(enemyEntities[x])){
+            enemyEntities.splice(x,1);
         }
     }
 
@@ -267,36 +335,72 @@ function checkCollision(){
     }
 }
 
-function updateGameArea() {
-    myGameArea.clear();
-    myGameArea.frameNo += 1;
+function checkDeath(){
+    if(playerPiece.health <= 0){
+        return true;
+    }
 
-    playerPiece.moveAngle = 0;
-    playerPiece.speedX = 0;
-    playerPiece.speedY = 0;
+    for(x in enemies){
+        if(enemies[x].health <= 0){
+            if(enemies[x].type === "lrg_spider"){
+                enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/medium_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "med_spider"));
+                enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/medium_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "med_spider"));
+            }
+            if(enemies[x].type === "med_spider"){
+                enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/small_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "sml_spider"));
+                enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/small_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "sml_spider"));
+            }
 
-    if (myGameArea.keys && myGameArea.keys[37]) {playerPiece.speedX = -playerMoveSpeed; }      // Left Arrow
-    if (myGameArea.keys && myGameArea.keys[39]) {playerPiece.speedX = playerMoveSpeed; }       // Right Arrow
-    if (myGameArea.keys && myGameArea.keys[38]) {playerPiece.speedY = playerMoveSpeed; }       // Up Arrow
-    if (myGameArea.keys && myGameArea.keys[40]) {playerPiece.speedY = -playerMoveSpeed; }      // Down Arrow
-
-    if (myGameArea.keys && myGameArea.keys[32] ) {                                 // Space Bar
-        // component(width, height, image, x, y, type)
-
-        if(everyNthFrame(10)){
-            var bulletEntity = new component(bulletWidth, bulletHeight, "assets/bullet.png", playerPiece.x + ((playerPiece.width/2)), playerPiece.y + 1 , "bullet");
-
-            playerEntities.push(bulletEntity);
+            enemies.splice(x, 1);
         }
     }
 
-    cycleEntities();
-    checkCollision();
+    return false;
+}
 
-    // Reference: keycode.info
+function updateGameArea() {
+    if(checkDeath()){
+        //component(width, height, image, x, y, type)
+        var gameOver = new component(splashWidth, splashHeight, "assets/gameover.png", 0, (areaHeight/2) - (splashHeight/2));
 
-    playerPiece.newPos();
-    playerPiece.update();
+        // gameOver.newPos();
+        gameOver.update();
+
+        myGameArea.stop;
+
+        if (myGameArea.keys && myGameArea.keys[32] ) {startGame()};
+    }
+    else{
+        myGameArea.clear();
+        myGameArea.frameNo += 1;
+    
+        playerPiece.moveAngle = 0;
+        playerPiece.speedX = 0;
+        playerPiece.speedY = 0;
+    
+        if (myGameArea.keys && myGameArea.keys[37]) {playerPiece.speedX = -playerMoveSpeed; }      // Left Arrow
+        if (myGameArea.keys && myGameArea.keys[39]) {playerPiece.speedX = playerMoveSpeed; }       // Right Arrow
+        if (myGameArea.keys && myGameArea.keys[38]) {playerPiece.speedY = playerMoveSpeed; }       // Up Arrow
+        if (myGameArea.keys && myGameArea.keys[40]) {playerPiece.speedY = -playerMoveSpeed; }      // Down Arrow
+    
+        if (myGameArea.keys && myGameArea.keys[32] ) {                                 // Space Bar
+            // component(width, height, image, x, y, type)
+    
+            if(everyNthFrame(10)){
+                var bulletEntity = new component(bulletWidth, bulletHeight, "assets/bullet.png", playerPiece.x + ((playerPiece.width/2)), playerPiece.y + 1     , "bullet");
+    
+                playerEntities.push(bulletEntity);
+            }
+        }
+    
+        cycleEntities();
+        checkCollision();
+    
+        // Reference: keycode.info
+    
+        playerPiece.newPos();
+        playerPiece.update();
+    }
 }
 </script>
 
