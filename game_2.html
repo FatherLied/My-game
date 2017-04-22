@@ -5,27 +5,68 @@
 <style>
 canvas {
     border:1px solid #d3d3d3;
-    background-color: #f1f1f1;
+    /*background-color: #111111;*/
+    background-color: #ffffff;
     margin: auto;
     display: block;
 }
+
+div{
+    display: block;
+    margin: auto;
+}
+
+.hidden {
+    display: none;
+}
+
 </style>
 </head>
 <body onload="startGame()">
 
 <script>
-var myGamePiece;
+var playerPiece;
+
+//Constants
+var playerWidth = 64;
+var playerHeight = 64;
+var playerMoveSpeed = 5;
+
+var bulletWidth = 8;
+var bulletHeight = 8;
+
+var spiderWidth = 210;
+var spiderHeight = 230;
+
+var areaWidth = 840;
+var areaHeight = 840;
+var areaBorder = 10;
+
+// Note: Spider Ratio is 21 x 23
+
+var playerEntities = [];    // Player created entities (i.e. Player Bullets)
+
+var enemies = [];           // Enemies
+var enemyEntities = [];     // Enemy created entities
+
 
 function startGame() {
-    myGamePiece = new component(30, 30, "red", 225, 225);
+    playerPiece = new component(playerWidth, playerHeight, "assets/plane.png", areaWidth/2 - playerWidth/2, areaHeight - areaBorder, "player");
+
+    var initialEnemy = new component(spiderWidth, spiderHeight, "assets/large_spider.png", areaWidth/2 - spiderWidth/2, areaBorder, "lrg_spider");
+
+    enemies.push(initialEnemy);
+
+    // playerPiece = new component(width, height, 'red', 420, 810);
     myGameArea.start();
 }
 
 var myGameArea = {
     canvas : document.createElement("canvas"),
+    border : areaBorder,
     start : function() {
-        this.canvas.width = 480;
-        this.canvas.height = 270;
+        this.canvas.width = areaWidth;
+        this.canvas.height = areaHeight;
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.frameNo = 0;
@@ -47,46 +88,212 @@ var myGameArea = {
     }
 }
 
-function component(width, height, color, x, y, type) {
+function everyNthFrame(n) {
+    if ((myGameArea.frameNo % n) == 0) {return true;}
+    return false;
+}
 
+function everyInterval(n) {
+    if ((myGameArea.frameNo % n) % 1 == 0) {return true;}
+    return false;
+}
+
+function component(width, height, image, x, y, type) {
     this.type = type;
+    // if (type == "image") {
+        this.image = new Image();
+        this.image.src = image;
+    // }
     this.width = width;
     this.height = height;
-    this.speed = 0;
-    this.angle = 0;
-    this.moveAngle = 0;
+    this.speedX = 0;
+    this.speedY = 0;    
     this.x = x;
-    this.y = y;    
+    this.y = y;
+
+    this.health = 0;
+
+    if(this.type === "player")
+        this.health = 100;
+    else if(this.type === "bullet")
+        this.health = 5;
+    else if(this.type === "lrg_spider")
+        this.health = 500;
+    else if(this.type === "med_spider")
+        this.health = 250;
+    else if(this.type === "sml_spider")
+        this.health = 125;
+
     this.update = function() {
         ctx = myGameArea.context;
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle);
-        ctx.fillStyle = color;
-        ctx.fillRect(this.width / -2, this.height / -2, this.width, this.height);
-        ctx.restore();    
+
+        /*
+
+        Add image cycling code here.
+        [use checkInterval() to determine when to cycle] 
+
+        */
+
+
+        // if (type == "image") {
+        ctx.drawImage(this.image, 
+            this.x, 
+            this.y,
+            this.width, this.height);
+        // } else {
+        //     ctx.fillStyle = color;
+        //     ctx.fillRect(this.x, this.y, this.width, this.height);
+        // }
     }
+
     this.newPos = function() {
-        this.angle += this.moveAngle * Math.PI / 180;
-        this.x += this.speed * Math.sin(this.angle);
-        this.y -= this.speed * Math.cos(this.angle);
+        this.x += this.speedX;
+        this.y -= this.speedY;
+
+        if(this.x > myGameArea.canvas.width - this.width - myGameArea.border)
+            this.x = myGameArea.canvas.width - this.width - myGameArea.border;
+        if(this.x < 0 + myGameArea.border)
+            this.x = 0 + myGameArea.border;
+
+        if(this.y > myGameArea.canvas.height - this.height - myGameArea.border)
+            this.y = myGameArea.canvas.height - this.height - myGameArea.border;
+        if(this.y < 0 + myGameArea.border)
+            this.y = 0 + myGameArea.border;
+    }
+
+    this.crashWith = function(otherobj) {
+        var myleft = this.x;
+        var myright = this.x + (this.width);
+        var mytop = this.y;
+        var mybottom = this.y + (this.height);
+        var otherleft = otherobj.x;
+        var otherright = otherobj.x + (otherobj.width);
+        var othertop = otherobj.y;
+        var otherbottom = otherobj.y + (otherobj.height);
+        var crash = true;
+        if ((mybottom < othertop) ||
+               (mytop > otherbottom) ||
+               (myright < otherleft) ||
+               (myleft > otherright)) {
+           crash = false;
+        }
+
+        if(crash)
+            this.receiveDmg(otherobj);
+
+        return crash;
+    }
+
+    this.receiveDmg = function( entity ) {
+        /*
+
+        Damage Calc here
+
+        */
+
+        if((this.type === "lrg_spider" || this.type === "med_spider" || this.type === "sml_spider")){
+            if(entity.type === "bullet"){
+                this.health -= entity.health;
+
+                if(this.health < 0)
+                    this.health = 0;
+            }
+
+            if(entity.type ==="player"){
+                entity.health -= 25;
+
+                if(entity.health < 0)
+                    entity.health = 0;
+
+                entity.speedX = 0;
+                entity.speedY = 0;
+
+                if(myGameArea.canvas.height - this.height > 3 * entity.height){
+                    entity.speedY = -entity.height;
+                }
+                else if(this.x > areaWidth - (this.x + this.width)){
+                    entity.speedY = -entity.height;
+                }
+
+                // entity.speedY = -entity.height;
+
+                entity.newPos();
+                entity.update();
+            }
+        }
+        // else if(this.type === "player"){
+            // if(entity.type === "lrg_spider" || entity.type === "med_spider" || entity.type === "sml_spider"){
+                // 
+            // }
+        // }
+    }
+}
+
+function cycleEntities(){
+    for(x in playerEntities){
+        playerEntities[x].speedY = 5;
+
+        playerEntities[x].newPos();
+        playerEntities[x].update();
+        
+        if(playerEntities[x].y <= 0 + myGameArea.border)
+            playerEntities.splice(x, 1);
+    }
+
+    for(x in enemies){
+        enemies[x].newPos();
+        enemies[x].update();
+    }
+}
+
+function checkCollision(){
+    for(x in playerEntities){
+        for(y in enemies){
+            if(enemies[y].crashWith(playerEntities[x])){
+                playerEntities.splice(x,1);
+            }
+        }
+    }
+
+    for(x in enemies){
+        enemies[x].crashWith(playerPiece);
     }
 }
 
 function updateGameArea() {
     myGameArea.clear();
-    myGamePiece.moveAngle = 0;
-    myGamePiece.speed = 0;
-    if (myGameArea.keys && myGameArea.keys[37]) {myGamePiece.moveAngle = -1; }
-    if (myGameArea.keys && myGameArea.keys[39]) {myGamePiece.moveAngle = 1; }
-    if (myGameArea.keys && myGameArea.keys[38]) {myGamePiece.speed= 1; }
-    if (myGameArea.keys && myGameArea.keys[40]) {myGamePiece.speed= -1; }
-    myGamePiece.newPos();
-    myGamePiece.update();
+    myGameArea.frameNo += 1;
+
+    playerPiece.moveAngle = 0;
+    playerPiece.speedX = 0;
+    playerPiece.speedY = 0;
+
+    if (myGameArea.keys && myGameArea.keys[37]) {playerPiece.speedX = -playerMoveSpeed; }      // Left Arrow
+    if (myGameArea.keys && myGameArea.keys[39]) {playerPiece.speedX = playerMoveSpeed; }       // Right Arrow
+    if (myGameArea.keys && myGameArea.keys[38]) {playerPiece.speedY = playerMoveSpeed; }       // Up Arrow
+    if (myGameArea.keys && myGameArea.keys[40]) {playerPiece.speedY = -playerMoveSpeed; }      // Down Arrow
+
+    if (myGameArea.keys && myGameArea.keys[32] ) {                                 // Space Bar
+        // component(width, height, image, x, y, type)
+
+        if(everyNthFrame(10)){
+            var bulletEntity = new component(bulletWidth, bulletHeight, "assets/bullet.png", playerPiece.x + ((playerPiece.width/2)), playerPiece.y + 1 , "bullet");
+
+            playerEntities.push(bulletEntity);
+        }
+    }
+
+    cycleEntities();
+    checkCollision();
+
+    // Reference: keycode.info
+
+    playerPiece.newPos();
+    playerPiece.update();
 }
 </script>
 
-<p>Make sure the gamearea has focus, and use the arrow keys to move the red square around.</p>
+<div><center>Make sure the gamearea has focus, and use the arrow keys to move around.</center></div>
 
 </body>
 </html>
