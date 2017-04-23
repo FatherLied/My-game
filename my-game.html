@@ -33,9 +33,11 @@ var playerHeight = 64;
 var playerMoveSpeed = 5;
 var playerHealth = 100;
 
+var healthBarLength = 150;
+
 var bulletWidth = 16;
 var bulletHeight = 16;
-var bulletPower = 100; // Default is 5
+var bulletPower = 10; // Default is 10
 
 var projectileWidth = 24;
 var projectileHeight = 24;
@@ -55,7 +57,7 @@ var s_kills = 0;
 
 var areaWidth = 840;
 var areaHeight = 840;
-var areaBorder = 10;
+var areaBorder = 20;
 
 var splashWidth = 840;
 var splashHeight = 120;
@@ -96,9 +98,9 @@ function startGame() {
     s_kills = 0;
 
     // Base Stats of Upgradables
-    // playerHealth = 100;
-    // playerMoveSpeed = 5;
-    // bulletPower = 5;
+    playerHealth = 100;
+    playerMoveSpeed = 5;
+    bulletPower = 10;
 
 
     playerPiece = new component(playerWidth, playerHeight, "assets/plane.png", areaWidth/2 - playerWidth/2, areaHeight - areaBorder, "player");
@@ -222,26 +224,29 @@ function component(width, height, image, x, y, type) {
                     this.isMoving = false;
             }
             else if(this.moveCode == 4){     //Charges
-                console.log("Dozer incoming!!!");
-                console.log("Frame: " + this.frameNo);
+                // console.log("Dozer incoming!!!");
+                // console.log("Frame: " + this.frameNo);
 
                 if(this.frameNo >= 0 && this.frameNo <= 20){
-                    console.log("Charging!");
-                    if(this.type === "lrg_spider")
-                        this.speedY = -(spiderSpeed*2);
-                    else(this.type === "med_spider")
+                    // console.log("Charging!");
+                    this.speedY = -(spiderSpeed*2);
+
+                    if(this.type === "med_spider"){
+                        this.speedY = -(spiderSpeed*3)
+                    }
+
+                    if(this.type === "sml_spider"){
                         this.speedY = -(spiderSpeed*4);
-                    else
-                        this.speedY = -(spiderSpeed*6);
+                    }
                 }
                     
                 else if(this.frameNo >= 21 && this.frameNo <= 60){
-                    console.log("Hold posistion!");
+                    // console.log("Hold posistion!");
                     this.speedY = 0;
                 }
                     
                 else if(this.frameNo >= 61 && this.frameNo <= 250){
-                    console.log("Fall back!")
+                    // console.log("Fall back!")
                     this.speedY = (spiderSpeed/2);
                 }
                     
@@ -271,11 +276,47 @@ function component(width, height, image, x, y, type) {
                 this.moveCode = 4;
             }
 
-            console.log("Move Code: " + this.moveCode);
+            // console.log("Move Code: " + this.moveCode);
 
             this.frameNo = 0;
             this.isMoving = true;
         }
+    }
+
+    this.drawHealth = function(){
+        // console.log("Called!");
+        ctx = myGameArea.context;
+
+        var maxHealth = 1;
+
+        if(this.type === "lrg_spider")
+            maxHealth = b_spiderHealth;
+        else if(this.type === "med_spider")
+            maxHealth = m_spiderHealth;
+        else
+            maxHealth = s_spiderHeatlh;
+
+        if (this.type === "player"){
+            ctx.fillStyle = "red";
+            ctx.fillRect(65, areaHeight - 13, healthBarLength, 10);
+
+            ctx.fillStyle = "green";
+            ctx.fillRect(65, areaHeight - 13, Math.floor((this.health/playerHealth) * healthBarLength), 10);
+
+            ctx.fillStyle = "black";
+            ctx.font = "20px MS Serif";
+            ctx.fillText("Health:", 2, areaHeight - 3);
+        }
+        else{
+            ctx.fillStyle = "red";
+            ctx.fillRect(this.x, (this.y + this.height + 10), this.width, 10);
+            // ctx.fillRect(0,0,64,64);
+
+            ctx.fillStyle = "green";
+            ctx.fillRect(this.x, (this.y + this.height + 10), Math.floor((this.health/maxHealth) * this.width), 10);
+            // ctx.fillRect(0,0,64,64);
+        }
+        
     }
 
     this.update = function() {
@@ -289,14 +330,14 @@ function component(width, height, image, x, y, type) {
         */
 
 
-        // if (type == "image") {
+        // if (!type === "health") {
         ctx.drawImage(this.image, 
             this.x, 
             this.y,
             this.width, this.height);
         // } else {
-        //     ctx.fillStyle = color;
-        //     ctx.fillRect(this.x, this.y, this.width, this.height);
+            // ctx.fillStyle = image;
+            // ctx.fillRect(this.x, this.y, this.width, this.height);
         // }
     }
 
@@ -383,11 +424,6 @@ function component(width, height, image, x, y, type) {
             }
         }
         else if(this.type === "player"){
-            /*
-
-            Add Projectile code here
-
-            */
             if(entity.type === "projectile"){
                 this.health -= entity.health;
 
@@ -431,6 +467,7 @@ function cycleEntities(){
 
         enemies[x].newPos();
         enemies[x].update();
+        enemies[x].drawHealth();
     }
 }
 
@@ -500,7 +537,8 @@ function updateGameArea() {
 
         myGameArea.stop;
 
-        if (myGameArea.keys && myGameArea.keys[82] ) {startGame()};
+        // if (myGameArea.keys && myGameArea.keys[82] ) {startGame()};
+        if (myGameArea.keys && myGameArea.keys[82] ) {window.location.reload();};
     }
     else{
         myGameArea.clear();
@@ -532,6 +570,7 @@ function updateGameArea() {
     
         playerPiece.newPos();
         playerPiece.update();
+        playerPiece.drawHealth();
     }
 }
 </script>
