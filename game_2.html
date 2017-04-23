@@ -35,7 +35,7 @@ var playerHealth = 100;
 
 var bulletWidth = 8;
 var bulletHeight = 8;
-var bulletPower = 5;
+var bulletPower = 100; // Default is 5
 
 var projectileWidth = 16;
 var projectileHeight = 16;
@@ -81,9 +81,16 @@ function spawn(){
 }
 
 function startGame() {
+    // Defaults
     playerEntities = [];
     enemies = [];       
-    enemyEntities = []; 
+    enemyEntities = [];
+
+    // Base Stats of Upgradables
+    // playerHealth = 100;
+    // playerMoveSpeed = 5;
+    // bulletPower = 5;
+
 
     playerPiece = new component(playerWidth, playerHeight, "assets/plane.png", areaWidth/2 - playerWidth/2, areaHeight - areaBorder, "player");
 
@@ -305,7 +312,7 @@ function cycleEntities(){
     for(x in enemies){
         var attackChance = getRandomInt(1, 100);
 
-        if(attackChance % 4 == 0 && everyNthFrame(20)){
+        if(attackChance % 4 == 0 && everyNthFrame(30)){
             enemyEntities.push(new component(projectileWidth, projectileHeight, "assets/projectile.png", enemies[x].x + ((enemies[x].width/2)), enemies[x].y + 100, "projectile"))
         }
 
@@ -355,6 +362,11 @@ function checkDeath(){
         }
     }
 
+    if(enemies.length == 0){
+        roundCount++;
+        spawn();
+    }
+
     return false;
 }
 
@@ -368,7 +380,7 @@ function updateGameArea() {
 
         myGameArea.stop;
 
-        if (myGameArea.keys && myGameArea.keys[32] ) {startGame()};
+        if (myGameArea.keys && myGameArea.keys[82] ) {startGame()};
     }
     else{
         myGameArea.clear();
