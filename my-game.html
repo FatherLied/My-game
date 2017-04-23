@@ -5,8 +5,8 @@
 <style>
 canvas {
     border:1px solid #d3d3d3;
-    /*background-color: #111111;*/
-    background-color: #ffffff;
+    background-color: #111111;
+    /*background-color: #ffffff;*/
     margin: auto;
     display: block;
 }
@@ -38,6 +38,7 @@ var healthBarLength = 150;
 var bulletWidth = 16;
 var bulletHeight = 16;
 var bulletPower = 10; // Default is 10
+var bulletSpeed = 5; // Default is 5
 
 var projectileWidth = 24;
 var projectileHeight = 24;
@@ -63,6 +64,10 @@ var splashWidth = 840;
 var splashHeight = 120;
 
 var roundCount = 1;
+
+var overFrames = 0;
+
+var  lastReward = "Nothing";        // Reward Type after clearing waves
 
 // Note: Spider Ratio is 21 x 23
 
@@ -98,9 +103,9 @@ function startGame() {
     s_kills = 0;
 
     // Base Stats of Upgradables
-    playerHealth = 100;
-    playerMoveSpeed = 5;
-    bulletPower = 10;
+    // playerHealth = 100;
+    // playerMoveSpeed = 5;
+    // bulletPower = 10;
 
 
     playerPiece = new component(playerWidth, playerHeight, "assets/plane.png", areaWidth/2 - playerWidth/2, areaHeight - areaBorder, "player");
@@ -303,7 +308,7 @@ function component(width, height, image, x, y, type) {
             ctx.fillStyle = "green";
             ctx.fillRect(65, areaHeight - 13, Math.floor((this.health/playerHealth) * healthBarLength), 10);
 
-            ctx.fillStyle = "black";
+            ctx.fillStyle = "white";
             ctx.font = "20px MS Serif";
             ctx.fillText("Health:", 2, areaHeight - 3);
         }
@@ -328,13 +333,12 @@ function component(width, height, image, x, y, type) {
         [use checkInterval() to determine when to cycle] 
 
         */
-
-
         // if (!type === "health") {
         ctx.drawImage(this.image, 
             this.x, 
             this.y,
             this.width, this.height);
+            
         // } else {
             // ctx.fillStyle = image;
             // ctx.fillRect(this.x, this.y, this.width, this.height);
@@ -380,11 +384,6 @@ function component(width, height, image, x, y, type) {
     }
 
     this.receiveDmg = function( entity ) {
-        /*
-
-        Damage Calc here
-
-        */
 
         if((this.type === "lrg_spider" || this.type === "med_spider" || this.type === "sml_spider")){
             if(entity.type === "bullet"){
@@ -395,13 +394,18 @@ function component(width, height, image, x, y, type) {
             }
 
             if(entity.type ==="player"){
-                entity.health -= 25;
+                entity.health -= 10;
 
                 if(entity.health < 0)
                     entity.health = 0;
 
                 entity.speedX = 0;
                 entity.speedY = 0;
+
+                this.health -= 25;
+
+                if(this.health < 0)
+                    this.health = 0;
 
                 
 
@@ -437,7 +441,7 @@ function component(width, height, image, x, y, type) {
 
 function cycleEntities(){
     for(x in playerEntities){
-        playerEntities[x].speedY = 5;
+        playerEntities[x].speedY = bulletSpeed;
 
         playerEntities[x].newPos();
         playerEntities[x].update();
@@ -492,6 +496,49 @@ function checkCollision(){
     }
 }
 
+var liveMessage = {
+    frameNo : 0,
+    isLive : false,
+
+    relayMessage : function(){
+        if(this.isLive){
+            this.frameNo++;
+
+            ctx.fillStyle = "white";
+            ctx.font = "20px MS Serif";
+            // var text = "Nothing.";
+
+            // console.log("The reward is: " + lastReward);
+
+            // if(lastReward === 1) // Health
+            // {
+                    // text = "Got Health Bonus!";
+            // }
+            // if(lastReward === 2) // Attack
+            // {
+                    // text = "Got Attack Bonus!";
+            // }
+            // else(lastReward === 3) // Health
+            // {
+                    // text = "Got Speed Bonus!";
+            // }
+
+            // console.log("Text is: " + text);
+
+            ctx.fillText(lastReward, areaWidth/2 - (areaWidth/16) , areaHeight - 3);
+
+            if(this.frameNo >= 200){
+                this.isLive = false;
+                this.frameNo = 0;
+            }
+        }
+    },
+
+    goLive : function(){
+        this.isLive = true;
+    }
+}
+
 function checkDeath(){
     if(playerPiece.health <= 0){
         return true;
@@ -522,6 +569,42 @@ function checkDeath(){
     if(enemies.length == 0){
         roundCount++;
         spawn();
+
+        var odds = getRandomInt(1, 100);
+
+        if(odds >= 1 && odds <= 25){ // Health Bonus
+            lastReward = "Got Health Bonus!";
+
+            playerHealth += 10;
+
+            playerPiece.health += playerHealth/2;
+
+            if(playerPiece.health > playerHealth)
+                playerPiece.health = playerHealth;
+        }
+        else if(odds >= 26 && odds <= 50){ // Attack Bonus
+            lastReward = "Got Attack Bonus!";
+
+            bulletPower += 5;
+
+        }
+        else if(odds >= 51 && odds <= 75){
+            lastReward = "Got Attack Speed Bonus!";
+
+            bulletSpeed += 5;
+        }
+        else{ // Speed Bonus
+            lastReward = "Got Speed Bonus!";
+
+            playerMoveSpeed++;
+
+            if(playerMoveSpeed > 20)
+                playerMoveSpeed = 20;
+        }
+
+        // console.log("Rewarded: " + lastReward);
+
+        liveMessage.goLive();
     }
 
     return false;
@@ -529,16 +612,64 @@ function checkDeath(){
 
 function updateGameArea() {
     if(checkDeath()){
+        // myGameArea.frameNo = 0;
         //component(width, height, image, x, y, type)
         var gameOver = new component(splashWidth, splashHeight, "assets/gameover.png", 0, (areaHeight/2) - (splashHeight/2));
 
+        var base = 20;
+        var step = 40;
         // gameOver.newPos();
         gameOver.update();
 
-        myGameArea.stop;
+        var ctx = myGameArea.context;
 
-        // if (myGameArea.keys && myGameArea.keys[82] ) {startGame()};
-        if (myGameArea.keys && myGameArea.keys[82] ) {window.location.reload();};
+        ctx.fillStyle = "white";
+        ctx.font = "30px MS Serif";
+
+        // ctx.fillText(text,x,y);
+
+        if(overFrames > 20){
+            // console.log("Large");
+
+            var lrgText = "Lrg Spiders killed: " + b_kills;
+            ctx.fillText(lrgText ,areaWidth/2 - (areaWidth/8), areaHeight/2 + splashHeight + base);
+        }
+
+        if(overFrames > 40){
+            // console.log("Large");
+
+            var medText = "Med Spiders killed: " + m_kills;
+            ctx.fillText(medText ,areaWidth/2 - (areaWidth/8), areaHeight/2 + splashHeight + (base + step));
+        }
+
+        if(overFrames > 60){
+            // console.log("Large");
+
+            var smlText = "Sml Spiders killed: " + s_kills;
+            ctx.fillText(smlText ,areaWidth/2 - (areaWidth/8), areaHeight/2 + splashHeight + (base + step*2));
+        }
+
+        if(overFrames > 80){
+            // console.log("Large");
+
+            var totalText = "Total kills: " + (b_kills + m_kills + s_kills);
+            ctx.fillText(totalText ,areaWidth/2 - (areaWidth/8), areaHeight/2 + splashHeight + (base + step*3 + 20));
+        }
+
+        if(overFrames > 150){
+            ctx.fillStyle = "red";
+            ctx.font = "30px MS Sans Serif";
+
+            ctx.fillText("Press [R] to restart.", areaWidth/2 - (areaWidth/8), areaHeight/2 + splashHeight + (base + step*4 + 40))
+
+            myGameArea.stop;
+
+            // if (myGameArea.keys && myGameArea.keys[82] ) {startGame()};
+            if (myGameArea.keys && myGameArea.keys[82] ) {window.location.reload();};
+        }
+        else{
+            overFrames++;
+        }
     }
     else{
         myGameArea.clear();
@@ -571,6 +702,8 @@ function updateGameArea() {
         playerPiece.newPos();
         playerPiece.update();
         playerPiece.drawHealth();
+
+        liveMessage.relayMessage();
     }
 }
 </script>
