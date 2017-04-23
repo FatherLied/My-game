@@ -30,15 +30,15 @@ var playerPiece;
 //Constants
 var playerWidth = 64;
 var playerHeight = 64;
-var playerMoveSpeed = 20;
+var playerMoveSpeed = 5;
 var playerHealth = 100;
 
-var bulletWidth = 8;
-var bulletHeight = 8;
+var bulletWidth = 16;
+var bulletHeight = 16;
 var bulletPower = 100; // Default is 5
 
-var projectileWidth = 16;
-var projectileHeight = 16;
+var projectileWidth = 24;
+var projectileHeight = 24;
 var projectilePower = 10;
 
 var spiderWidth = 210;
@@ -47,6 +47,11 @@ var spiderHeight = 230;
 var b_spiderHealth = 250;
 var m_spiderHealth = 125;
 var s_spiderHeatlh = 75;
+var spiderSpeed = 5;
+
+var b_kills = 0;
+var m_kills = 0;
+var s_kills = 0;
 
 var areaWidth = 840;
 var areaHeight = 840;
@@ -85,6 +90,10 @@ function startGame() {
     playerEntities = [];
     enemies = [];       
     enemyEntities = [];
+
+    b_kills = 0;
+    m_kills = 0;
+    s_kills = 0;
 
     // Base Stats of Upgradables
     // playerHealth = 100;
@@ -166,6 +175,108 @@ function component(width, height, image, x, y, type) {
         this.health = s_spiderHeatlh;
     else if(this.type === "projectile")
         this.health = projectilePower;
+
+    this.isMoving = false;
+    this.moveDirection = 0;
+    this.moveCode = 0;      // Indicates type of movement
+    this.frameNo = 0;
+
+    this.move = function() {
+        if(!this.type === "lrg_spider" || !this.type === "med_spider" || !this.type === "sml_spider"){
+            return;
+        }
+
+        this.frameNo++;
+
+        if(this.isMoving){
+            if(this.moveCode == 1){          // Move Quickly
+                if(this.moveDirection == 1){
+                    this.speedX = spiderSpeed*2;
+                }
+                else{
+                    this.speedX = -(spiderSpeed*2);
+                }
+
+                if(this.frameNo >= 30){
+                    this.speedX = 0;
+                    this.isMoving = false;
+                }
+            }
+            else if(this.moveCode == 2){     // Move Slowly
+                if(this.moveDirection == 1){
+                    this.speedX = spiderSpeed;
+                }
+                else{
+                    this.speedX = -spiderSpeed;
+                }
+
+                if(this.frameNo >= 20){
+                    this.speedX = 0;
+                    this.isMoving = false;
+                }
+            }
+            else if(this.moveCode == 3){     //Stays in Place
+                this.speedX = 0;
+
+                if(this.frameNo >= 50)
+                    this.isMoving = false;
+            }
+            else if(this.moveCode == 4){     //Charges
+                console.log("Dozer incoming!!!");
+                console.log("Frame: " + this.frameNo);
+
+                if(this.frameNo >= 0 && this.frameNo <= 20){
+                    console.log("Charging!");
+                    if(this.type === "lrg_spider")
+                        this.speedY = -(spiderSpeed*2);
+                    else(this.type === "med_spider")
+                        this.speedY = -(spiderSpeed*4);
+                    else
+                        this.speedY = -(spiderSpeed*6);
+                }
+                    
+                else if(this.frameNo >= 21 && this.frameNo <= 60){
+                    console.log("Hold posistion!");
+                    this.speedY = 0;
+                }
+                    
+                else if(this.frameNo >= 61 && this.frameNo <= 250){
+                    console.log("Fall back!")
+                    this.speedY = (spiderSpeed/2);
+                }
+                    
+
+                else
+                    this.isMoving = false;
+            }
+
+            // console.log("Speed = " + this.speedX);
+        }
+        else{
+            var odds = getRandomInt(1,100);
+            this.moveDirection = (getRandomInt(1,100) % 2) + 1;
+
+            // console.log(odds);
+
+            if(odds >= 1 && odds <= 25){       // Moves Quickly
+                this.moveCode = 1;
+            }
+            else if(odds >= 26 && odds <= 50){ // Moves Slowly
+                this.moveCode = 2;
+            }
+            else if(odds >= 51 && odds <= 75){ // Stay in Place
+                this.moveCode = 3;
+            }
+            else{                              // Charge at player
+                this.moveCode = 4;
+            }
+
+            console.log("Move Code: " + this.moveCode);
+
+            this.frameNo = 0;
+            this.isMoving = true;
+        }
+    }
 
     this.update = function() {
         ctx = myGameArea.context;
@@ -305,16 +416,18 @@ function cycleEntities(){
         enemyEntities[x].newPos();
         enemyEntities[x].update();
         
-        if(enemyEntities[x].y >= areaHeight - myGameArea.border)
+        if(enemyEntities[x].y + enemyEntities[x].height >= areaHeight - myGameArea.border)
             enemyEntities.splice(x, 1);
     }
 
     for(x in enemies){
         var attackChance = getRandomInt(1, 100);
 
-        if(attackChance % 4 == 0 && everyNthFrame(30)){
+        if(attackChance % 4 == 0 && everyNthFrame(40 + getRandomInt(0,20))){
             enemyEntities.push(new component(projectileWidth, projectileHeight, "assets/projectile.png", enemies[x].x + ((enemies[x].width/2)), enemies[x].y + 100, "projectile"))
         }
+
+        enemies[x].move();
 
         enemies[x].newPos();
         enemies[x].update();
@@ -352,10 +465,17 @@ function checkDeath(){
             if(enemies[x].type === "lrg_spider"){
                 enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/medium_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "med_spider"));
                 enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/medium_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "med_spider"));
+
+                b_kills++;
             }
-            if(enemies[x].type === "med_spider"){
+            else if(enemies[x].type === "med_spider"){
                 enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/small_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "sml_spider"));
                 enemies.push(new component(enemies[x].width/2,enemies[x].height/2, "assets/small_spider.png", enemies[x].x + (enemies[x].width/2), enemies[x].y, "sml_spider"));
+
+                m_kills++;
+            }
+            else{
+                s_kills++;
             }
 
             enemies.splice(x, 1);
