@@ -188,6 +188,8 @@ function component(width, height, image, x, y, type) {
     this.moveCode = 0;      // Indicates type of movement
     this.frameNo = 0;
 
+    this.isHit = false;
+
     this.move = function() {
         if(!this.type === "lrg_spider" || !this.type === "med_spider" || !this.type === "sml_spider"){
             return;
@@ -327,6 +329,20 @@ function component(width, height, image, x, y, type) {
     this.update = function() {
         ctx = myGameArea.context;
 
+        if(this.type === "player"){
+            if(this.isHit){
+                this.frameNo--;
+
+                this.image.src = "assets/hurt.png";
+
+                if(this.frameNo <= 0){
+                    this.isHit = false;
+                    this.frameNo = 0;
+
+                    this.image.src = "assets/plane.png";
+                }
+            }
+        }
         /*
 
         Add image cycling code here.
@@ -343,6 +359,11 @@ function component(width, height, image, x, y, type) {
             // ctx.fillStyle = image;
             // ctx.fillRect(this.x, this.y, this.width, this.height);
         // }
+    }
+
+    this.hit = function() {
+        this.isHit = true;
+        this.frameNo = 20;
     }
 
     this.newPos = function() {
@@ -394,6 +415,7 @@ function component(width, height, image, x, y, type) {
             }
 
             if(entity.type ==="player"){
+                entity.hit();
                 entity.health -= 10;
 
                 if(entity.health < 0)
@@ -418,8 +440,18 @@ function component(width, height, image, x, y, type) {
                 //     }
                 // }
                 
-                if(!entity.health <= 0)
+                if(!entity.health <= 0){
                     entity.speedY = -(entity.height*2);
+
+                    if(entity.y - entity.speedY <= areaBorder){
+                        if(this.x < areaWidth - this.x){
+                            entity.speedX = (entity.height*2);
+                        }
+                        else{
+                            entity.speedX = -(entity.height*2);
+                        }
+                    }
+                }
 
                 // entity.speedY = -entity.height;
 
@@ -429,6 +461,7 @@ function component(width, height, image, x, y, type) {
         }
         else if(this.type === "player"){
             if(entity.type === "projectile"){
+                this.hit();
                 this.health -= entity.health;
 
                 if(this.health < 0)
