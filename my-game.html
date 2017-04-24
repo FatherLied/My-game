@@ -63,6 +63,8 @@ var areaBorder = 20;
 var splashWidth = 840;
 var splashHeight = 120;
 
+var pickUpSize = 32;
+
 var roundCount = 1;
 
 var overFrames = 0;
@@ -75,6 +77,10 @@ var playerEntities = [];    // Player created entities (i.e. Player Bullets)
 
 var enemies = [];           // Enemies
 var enemyEntities = [];     // Enemy created entities
+
+var pickUpEntities = [];
+var dropDuration = 250;
+var healAmount = 10;
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
@@ -94,9 +100,9 @@ function spawn(){
 
 function startGame() {
     // Defaults
-    playerEntities = [];
-    enemies = [];       
-    enemyEntities = [];
+    // playerEntities = [];
+    // enemies = [];       
+    // enemyEntities = [];
 
     b_kills = 0;
     m_kills = 0;
@@ -182,6 +188,9 @@ function component(width, height, image, x, y, type) {
         this.health = s_spiderHeatlh;
     else if(this.type === "projectile")
         this.health = projectilePower;
+    else if(this.type === "health"){
+        this.health = healAmount;
+    }
 
     this.isMoving = false;
     this.moveDirection = 0;
@@ -265,8 +274,8 @@ function component(width, height, image, x, y, type) {
             // console.log("Speed = " + this.speedX);
         }
         else{
-            var odds = getRandomInt(1,100);
-            this.moveDirection = (getRandomInt(1,100) % 2) + 1;
+            var odds = getRandomInt(0,100);
+            this.moveDirection = (getRandomInt(0,100) % 2) + 1;
 
             // console.log(odds);
 
@@ -467,6 +476,16 @@ function component(width, height, image, x, y, type) {
                 if(this.health < 0)
                     this.health = 0;
             }
+
+            console.log("Entity:" + entity.type);
+
+            if(entity.type === "health"){
+                console.log("Adding Health!");
+                this.health += entity.health;
+
+                if(this.health >= playerHealth)
+                    this.health = playerHealth;
+            }
         }
 
     }
@@ -494,9 +513,9 @@ function cycleEntities(){
     }
 
     for(x in enemies){
-        var attackChance = getRandomInt(1, 100);
+        var attackChance = getRandomInt(0, 100);
 
-        if(attackChance % 4 == 0 && everyNthFrame(40 + getRandomInt(0,20))){
+        if(attackChance % 4 == 0 && everyNthFrame(40 + getRandomInt(0,21))){
             enemyEntities.push(new component(projectileWidth, projectileHeight, "assets/projectile.png", enemies[x].x + ((enemies[x].width/2)), enemies[x].y + 100, "projectile"))
         }
 
@@ -505,6 +524,12 @@ function cycleEntities(){
         enemies[x].newPos();
         enemies[x].update();
         enemies[x].drawHealth();
+    }
+
+    for(x in pickUpEntities){
+        pickUpEntities[x].frameNo--;
+
+        pickUpEntities[x].update();
     }
 }
 
@@ -526,6 +551,12 @@ function checkCollision(){
 
     for(x in enemies){
         enemies[x].crashWith(playerPiece);
+    }
+
+    for(x in pickUpEntities){
+        if(pickUpEntities[x].frameNo <= 0 || playerPiece.crashWith(pickUpEntities[x])){
+            pickUpEntities.splice(x, 1);
+        }
     }
 }
 
@@ -603,7 +634,7 @@ function checkDeath(){
         roundCount++;
         spawn();
 
-        var odds = getRandomInt(1, 100);
+        var odds = getRandomInt(0, 100);
 
         if(odds >= 1 && odds <= 25){ // Health Bonus
             lastReward = "Got Health Bonus!";
@@ -729,6 +760,23 @@ function updateGameArea() {
     
         cycleEntities();
         checkCollision();
+
+        if(everyNthFrame(150 + getRandomInt(0,101))){
+            console.log("Here!");
+
+            var pickUpChance = getRandomInt(0, 100);
+
+            // component(width, height, image, x, y, type)
+            if(pickUpChance % 2 == 0){
+                console.log("Dropping!");
+
+                var drop = new component(pickUpSize, pickUpSize, "assets/health_pickup.png", getRandomInt(areaBorder, (areaWidth - areaBorder - pickUpSize + 1)), getRandomInt(areaBorder, (areaHeight - areaBorder - pickUpSize + 1)), "health");
+
+                drop.frameNo = dropDuration;
+
+                pickUpEntities.push(drop);
+            }
+        }
     
         // Reference: keycode.info
     
@@ -737,6 +785,15 @@ function updateGameArea() {
         playerPiece.drawHealth();
 
         liveMessage.relayMessage();
+
+        var ctx = myGameArea.context;
+
+        ctx.fillStyle = "white";
+        ctx.font = "20px MS Serif";
+
+        var totalKills = "Kills: " + (b_kills + m_kills + s_kills);
+
+        ctx.fillText(totalKills, 2, areaBorder);
     }
 }
 </script>
