@@ -477,10 +477,10 @@ function component(width, height, image, x, y, type) {
                     this.health = 0;
             }
 
-            console.log("Entity:" + entity.type);
+            // console.log("Entity:" + entity.type);
 
             if(entity.type === "health"){
-                console.log("Adding Health!");
+                // console.log("Adding Health!");
                 this.health += entity.health;
 
                 if(this.health >= playerHealth)
@@ -762,13 +762,13 @@ function updateGameArea() {
         checkCollision();
 
         if(everyNthFrame(150 + getRandomInt(0,101))){
-            console.log("Here!");
+            // console.log("Here!");
 
             var pickUpChance = getRandomInt(0, 100);
 
             // component(width, height, image, x, y, type)
             if(pickUpChance % 2 == 0){
-                console.log("Dropping!");
+                // console.log("Dropping!");
 
                 var drop = new component(pickUpSize, pickUpSize, "assets/health_pickup.png", getRandomInt(areaBorder, (areaWidth - areaBorder - pickUpSize + 1)), getRandomInt(areaBorder, (areaHeight - areaBorder - pickUpSize + 1)), "health");
 
