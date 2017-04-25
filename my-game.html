@@ -39,6 +39,7 @@ var bulletWidth = 16;
 var bulletHeight = 16;
 var bulletPower = 10; // Default is 10
 var bulletSpeed = 5; // Default is 5
+var bulletFreq = 10;
 
 var projectileWidth = 12;
 var projectileHeight = 32;
@@ -653,17 +654,58 @@ function checkDeath(){
 
         }
         else if(odds >= 51 && odds <= 75){
-            lastReward = "Got Attack Speed Bonus!";
+            if(bulletFreq > 2){
+                lastReward = "Got Attack Speed Bonus!";
 
-            bulletSpeed += 5;
+                bulletFreq -= 1;
+    
+                if(bulletFreq <= 2)
+                    bulletFreq = 2;
+            }
+
+            else if(odds >= 51 && odds <= 64){
+                lastReward = "Got Attack Bonus!";
+
+                bulletPower += 5;
+            }
+
+            else{
+                lastReward = "Got Health Bonus!";
+
+                playerHealth += 10;
+
+                playerPiece.health += playerHealth/2;
+
+                if(playerPiece.health > playerHealth)
+                    playerPiece.health = playerHealth;
+            }
         }
         else{ // Speed Bonus
-            lastReward = "Got Speed Bonus!";
+            if(playerMoveSpeed < 10){
+                lastReward = "Got Speed Bonus!";
 
             playerMoveSpeed++;
 
-            if(playerMoveSpeed > 20)
-                playerMoveSpeed = 20;
+            if(playerMoveSpeed > 10)
+                playerMoveSpeed = 10;
+            }
+
+            else if(odds >= 75 && odds <= 88){
+                lastReward = "Got Attack Bonus!";
+
+                bulletPower += 5;
+            }
+
+            else{
+                lastReward = "Got Health Bonus!";
+
+                playerHealth += 10;
+
+                playerPiece.health += playerHealth/2;
+
+                if(playerPiece.health > playerHealth)
+                    playerPiece.health = playerHealth;
+            }
         }
 
         // console.log("Rewarded: " + lastReward);
@@ -751,7 +793,7 @@ function updateGameArea() {
         if (myGameArea.keys && myGameArea.keys[32] ) {                                 // Space Bar
             // component(width, height, image, x, y, type)
     
-            if(everyNthFrame(10)){
+            if(everyNthFrame(bulletFreq)){
                 var bulletEntity = new component(bulletWidth, bulletHeight, "assets/bullet.png", playerPiece.x + ((playerPiece.width/2)), playerPiece.y + 1     , "bullet");
     
                 playerEntities.push(bulletEntity);
